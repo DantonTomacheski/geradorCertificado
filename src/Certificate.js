@@ -222,7 +222,7 @@ function Certificate() {
   }
 
   return (
-    <div style={{ padding: '140px' }}>
+    <div style={{ padding: '20px' }}>
       <Grid container spacing={3}>
         <Grid item xs={12}>
           <TextField

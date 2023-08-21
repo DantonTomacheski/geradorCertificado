@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import {
   TextField,
   Button,
@@ -6,7 +6,9 @@ import {
   MenuItem,
   TextareaAutosize,
   Grid,
+  CircularProgress,
 } from '@material-ui/core'
+
 import { PDFDocument, rgb } from 'pdf-lib'
 import * as fontkit from 'fontkit'
 import * as pdfjsLib from 'pdfjs-dist'
@@ -26,6 +28,9 @@ function Certificate() {
   const [additionalTextFont, setAdditionalTextFont] = useState('DejaVuSans')
   const [fontSize, setFontSize] = useState('48')
   const [font, setFont] = useState('DejaVuSans')
+  const [isLoading, setIsLoading] = useState(false)
+  const [isDownloading, setIsDownloading] = useState(false)
+  const [isRendering, setIsRendering] = useState(false)
 
   let savedPDFBytes = null
 
@@ -168,14 +173,18 @@ function Certificate() {
   }
 
   const handleSubmit = async () => {
+    setIsLoading(true)
     const firstStudent = names.split(',')[0]
     if (firstStudent) {
       savedPDFBytes = await generatePDFForStudent(firstStudent)
       renderPDFPreview(savedPDFBytes)
     }
+    setIsLoading(false)
   }
 
   const downloadPDF = async () => {
+    setIsDownloading(true) // Iniciar o estado de carregamento
+
     const students = names.split(',')
     for (let student of students) {
       savedPDFBytes = await generatePDFForStudent(student)
@@ -196,29 +205,39 @@ function Certificate() {
       document.body.removeChild(link)
       URL.revokeObjectURL(url)
     }
+
+    setIsDownloading(false)
   }
 
-  const renderPDFPreview = (pdfBytes) => {
+  const renderPDFPreview = async (pdfBytes) => {
+    if (isRendering) return
+
+    setIsRendering(true)
+
     const blob = new Blob([pdfBytes], { type: 'application/pdf' })
 
-    const pdfjsViewer = pdfjsLib.getDocument(URL.createObjectURL(blob))
-    pdfjsViewer.promise.then((pdf) => {
-      pdf.getPage(1).then((page) => {
-        const scale = 1.5
-        const viewport = page.getViewport({ scale })
+    const pdf = await pdfjsLib.getDocument(URL.createObjectURL(blob)).promise
+    const page = await pdf.getPage(1)
 
-        const canvas = document.getElementById('pdf-preview')
-        const context = canvas.getContext('2d')
-        canvas.height = viewport.height
-        canvas.width = viewport.width
+    const scale = 1.5
+    const viewport = page.getViewport({ scale })
 
-        const renderContext = {
-          canvasContext: context,
-          viewport: viewport,
-        }
-        page.render(renderContext)
-      })
-    })
+    const canvas = document.getElementById('pdf-preview')
+    const context = canvas.getContext('2d')
+
+    // Limpe o canvas
+    context.clearRect(0, 0, canvas.width, canvas.height)
+
+    canvas.height = viewport.height
+    canvas.width = viewport.width
+
+    const renderContext = {
+      canvasContext: context,
+      viewport: viewport,
+    }
+
+    await page.render(renderContext).promise
+    setIsRendering(false)
   }
 
   return (
@@ -229,7 +248,10 @@ function Certificate() {
             label='Nomes (separados por vírgula e sem espaço entre eles)'
             fullWidth
             value={names}
-            onChange={(e) => setNames(e.target.value)}
+            onChange={(e) => {
+              const sanitizedNames = e.target.value.replace(/,\s+/g, ',')
+              setNames(sanitizedNames)
+            }}
           />
         </Grid>
         <Grid item xs={12}>
@@ -286,13 +308,27 @@ function Certificate() {
               onClick={() => downloadPDF(savedPDFBytes)}
               variant='contained'
               color='secondary'
+              disabled={isDownloading || isRendering}
             >
-              Baixar Certificado
+              {isDownloading ? (
+                <CircularProgress size={24} color='inherit' />
+              ) : (
+                'Baixar Certificado(s)'
+              )}
             </Button>
           </Grid>
           <Grid item>
-            <Button onClick={handleSubmit} variant='contained' color='primary'>
-              Visualizar Certificados
+            <Button
+              onClick={handleSubmit}
+              variant='contained'
+              color='primary'
+              disabled={isLoading || isRendering}
+            >
+              {isLoading ? (
+                <CircularProgress size={24} color='inherit' />
+              ) : (
+                'Visualizar Certificado'
+              )}
             </Button>
           </Grid>
         </Grid>

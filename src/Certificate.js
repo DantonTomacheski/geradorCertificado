@@ -49,6 +49,31 @@ function Certificate() {
     setOpenModal(true)
   }
 
+  const getFontBytesAndEmbed = async (fontName, pdfDoc) => {
+    let fontPath
+    switch (fontName) {
+      case 'DejaVuSans':
+        fontPath = 'DejaVuSans.ttf'
+        break
+      case 'ScriptMTBold':
+        fontPath = 'script-mt-bold.ttf'
+        break
+      case 'TomNR':
+        fontPath = 'tomnr.ttf'
+        break
+      case 'AlefRegular':
+        fontPath = 'Alef-Regular.ttf'
+        break
+      case 'BodoniFLF':
+        fontPath = 'BodoniFLF.ttf'
+        break
+      default:
+        fontPath = 'DejaVuSans.ttf'
+    }
+    const fontBytes = await fetch(fontPath).then((res) => res.arrayBuffer())
+    return await pdfDoc.embedFont(fontBytes)
+  }
+
   const generatePDFForStudent = async (studentName) => {
     let templateURL
     switch (template) {
@@ -72,82 +97,14 @@ function Certificate() {
     const pdfDoc = await PDFDocument.load(pdfBytes)
     pdfDoc.registerFontkit(fontkit)
 
-    // FONTE DIFERENTE PARA NOME DO ALUNO
-    let embeddedFont
-    switch (font) {
-      case 'DejaVuSans':
-        const dejaVuBytes = await fetch('DejaVuSans.ttf').then((res) =>
-          res.arrayBuffer()
-        )
-        embeddedFont = await pdfDoc.embedFont(dejaVuBytes)
-        break
-      case 'ScriptMTBold':
-        const scriptMTBoldBytes = await fetch('script-mt-bold.ttf').then(
-          (res) => res.arrayBuffer()
-        )
-        embeddedFont = await pdfDoc.embedFont(scriptMTBoldBytes)
-        break
-      case 'TomNR':
-        const tomNR = await fetch('tomnr.ttf').then((res) => res.arrayBuffer())
-        embeddedFont = await pdfDoc.embedFont(tomNR)
-        break
-      case 'AlefRegular':
-        const alefRegular = await fetch('Alef-Regular.ttf').then((res) =>
-          res.arrayBuffer()
-        )
-        embeddedFont = await pdfDoc.embedFont(alefRegular)
-        break
-      case 'BodoniFLF':
-        const bodoniFLF = await fetch('BodoniFLF.ttf').then((res) =>
-          res.arrayBuffer()
-        )
-        embeddedFont = await pdfDoc.embedFont(bodoniFLF)
-        break
-      default:
-        const defaultFontBytes = await fetch('DejaVuSans.ttf').then((res) =>
-          res.arrayBuffer()
-        )
-        embeddedFont = await pdfDoc.embedFont(defaultFontBytes)
-        break
-    }
+    // função para o nome do aluno
+    const embeddedFont = await getFontBytesAndEmbed(font, pdfDoc)
 
-    // FONTE DIFERENTE PARA O TEXTO ADICIONAL
-    const getEmbeddedFontForAdditionalText = async () => {
-      switch (additionalTextFont) {
-        case 'DejaVuSans':
-          const dejaVuBytes = await fetch('DejaVuSans.ttf').then((res) =>
-            res.arrayBuffer()
-          )
-          return await pdfDoc.embedFont(dejaVuBytes)
-        case 'ScriptMTBold':
-          const scriptMTBoldBytes = await fetch('script-mt-bold.ttf').then(
-            (res) => res.arrayBuffer()
-          )
-          return await pdfDoc.embedFont(scriptMTBoldBytes)
-        case 'TomNR':
-          const tomNR = await fetch('tomnr.ttf').then((res) =>
-            res.arrayBuffer()
-          )
-          return await pdfDoc.embedFont(tomNR)
-        case 'AlefRegular':
-          const alefRegular = await fetch('Alef-Regular.ttf').then((res) =>
-            res.arrayBuffer()
-          )
-          return await pdfDoc.embedFont(alefRegular)
-        case 'BodoniFLF':
-          const bodoniFLF = await fetch('BodoniFLF.ttf').then((res) =>
-            res.arrayBuffer()
-          )
-          return await pdfDoc.embedFont(bodoniFLF)
-        default:
-          const defaultFontBytes = await fetch('DejaVuSans.ttf').then((res) =>
-            res.arrayBuffer()
-          )
-          return await pdfDoc.embedFont(defaultFontBytes)
-      }
-    }
-
-    const additionalTextEmbeddedFont = await getEmbeddedFontForAdditionalText()
+    // função para o texto adicional
+    const additionalTextEmbeddedFont = await getFontBytesAndEmbed(
+      additionalTextFont,
+      pdfDoc
+    )
 
     const page = pdfDoc.getPages()[0]
 

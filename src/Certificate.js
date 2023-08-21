@@ -7,6 +7,11 @@ import {
   TextareaAutosize,
   Grid,
   CircularProgress,
+  Typography,
+  DialogActions,
+  Dialog,
+  DialogTitle,
+  DialogContent,
 } from '@material-ui/core'
 
 import { PDFDocument, rgb } from 'pdf-lib'
@@ -31,19 +36,39 @@ function Certificate() {
   const [isLoading, setIsLoading] = useState(false)
   const [isDownloading, setIsDownloading] = useState(false)
   const [isRendering, setIsRendering] = useState(false)
+  const [openModal, setOpenModal] = useState(false)
+  const [previewName, setPreviewName] = useState('')
+
+  const [template, setTemplate] = useState('template1')
 
   let savedPDFBytes = null
 
+  const handleOpenModal = () => {
+    const firstStudent = names.split(',')[0].trim()
+    setPreviewName(firstStudent)
+    setOpenModal(true)
+  }
+
   const generatePDFForStudent = async (studentName) => {
+    let templateURL
+    switch (template) {
+      case 'template1':
+        templateURL = 'template.pdf'
+        break
+      // Você pode adicionar mais cases quando tiver outros templates
+      default:
+        templateURL = 'template.pdf'
+        break
+    }
+
     const formatDateToBrazilian = (date) => {
       const [year, month, day] = date.split('-')
       return `${day}/${month}/${year}`
     }
     const formattedDate = formatDateToBrazilian(date)
 
-    const pdfBytes = await fetch('template.pdf').then((res) =>
-      res.arrayBuffer()
-    )
+    const pdfBytes = await fetch(templateURL).then((res) => res.arrayBuffer())
+
     const pdfDoc = await PDFDocument.load(pdfBytes)
     pdfDoc.registerFontkit(fontkit)
 
@@ -172,19 +197,17 @@ function Certificate() {
     return await pdfDoc.save()
   }
 
-  const handleSubmit = async () => {
+  const handleSubmit = async (name) => {
     setIsLoading(true)
-    const firstStudent = names.split(',')[0]
-    if (firstStudent) {
-      savedPDFBytes = await generatePDFForStudent(firstStudent)
+    if (name) {
+      savedPDFBytes = await generatePDFForStudent(name)
       renderPDFPreview(savedPDFBytes)
     }
     setIsLoading(false)
   }
 
   const downloadPDF = async () => {
-    setIsDownloading(true) // Iniciar o estado de carregamento
-
+    setIsDownloading(true)
     const students = names.split(',')
     for (let student of students) {
       savedPDFBytes = await generatePDFForStudent(student)
@@ -205,7 +228,6 @@ function Certificate() {
       document.body.removeChild(link)
       URL.revokeObjectURL(url)
     }
-
     setIsDownloading(false)
   }
 
@@ -302,6 +324,19 @@ function Certificate() {
             <MenuItem value='BodoniFLF'>BodoniFLF</MenuItem>
           </Select>
         </Grid>
+        <Grid item xs={12}>
+          <Typography variant='h6' style={{ marginBottom: '10px' }}>
+            Escolha o Template
+          </Typography>
+          <Select
+            value={template}
+            onChange={(e) => setTemplate(e.target.value)}
+          >
+            <MenuItem value='template1'>Template 1</MenuItem>
+            {/* Você pode adicionar mais templates aqui no futuro */}
+          </Select>
+        </Grid>
+
         <Grid container item spacing={2} xs={12}>
           <Grid item>
             <Button
@@ -319,21 +354,58 @@ function Certificate() {
           </Grid>
           <Grid item>
             <Button
-              onClick={handleSubmit}
+              onClick={handleOpenModal}
               variant='contained'
               color='primary'
-              disabled={isLoading || isRendering}
+              disabled={isLoading}
             >
               {isLoading ? (
                 <CircularProgress size={24} color='inherit' />
               ) : (
-                'Visualizar Certificado'
+                'Visualizar Certificados'
               )}
             </Button>
+            <Dialog
+              open={openModal}
+              onClose={() => setOpenModal(false)}
+              aria-labelledby='alert-dialog-title'
+              aria-describedby='alert-dialog-description'
+            >
+              <DialogTitle id='alert-dialog-title'>
+                {'Escolha um nome para visualizar'}
+              </DialogTitle>
+              <DialogContent>
+                <Select
+                  value={previewName}
+                  onChange={(e) => setPreviewName(e.target.value)}
+                  fullWidth
+                >
+                  {names.split(',').map((name, index) => (
+                    <MenuItem key={index} value={name.trim()}>
+                      {name.trim()}
+                    </MenuItem>
+                  ))}
+                </Select>
+              </DialogContent>
+              <DialogActions>
+                <Button onClick={() => setOpenModal(false)} color='primary'>
+                  Cancelar
+                </Button>
+                <Button
+                  onClick={() => {
+                    setOpenModal(false)
+                    handleSubmit(previewName)
+                  }}
+                  color='primary'
+                  autoFocus
+                >
+                  Visualizar
+                </Button>
+              </DialogActions>
+            </Dialog>
           </Grid>
         </Grid>
         <Grid item xs={12}>
-          {/* PREVIEW PDF */}
           <canvas id='pdf-preview'></canvas>
         </Grid>
       </Grid>

@@ -357,7 +357,7 @@ function Certificate() {
               onClick={handleOpenModal}
               variant='contained'
               color='primary'
-              disabled={isLoading}
+              disabled={isLoading || isRendering}
             >
               {isLoading ? (
                 <CircularProgress size={24} color='inherit' />
